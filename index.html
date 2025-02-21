@@ -54,45 +54,98 @@
     <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.8.1/tsparticles.confetti.bundle.min.js" defer></script>
     <script type="module">
-        window.addEventListener('DOMContentLoaded', async () => {
+        let vc = null;
+        let hasConfettied = false;
+        let notified = false;
+
+        function updateTimeLeft() {
+            const expiry = humanizeDuration(new Date() - new Date(vc[0].expiry), { round: true }) + ' left';
+            document.getElementById("duration").innerHTML = expiry;
+        }
+
+        async function showConfetti() {
+            await confetti("tsparticles", {
+                angle: 90,
+                count: 50,
+                position: {
+                    x: 50,
+                    y: 50,
+                },
+                spread: 45,
+                startVelocity: 45,
+                decay: 0.9,
+                gravity: 1,
+                drift: 0,
+                ticks: 200,
+                colors: ["#ffffff", "#ff0000"],
+                shapes: ["square", "circle"],
+                scalar: 1,
+                zIndex: 100,
+                disableForReducedMotion: true,
+            });
+
+            hasConfettied = true;
+            updateTimeLeft();
+        }
+
+        async function refresh() {
             const r = await fetch("https://api.warframestat.us/pc/fissures");
             const d = await r.json();
-            const vc = d.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
+            vc = d.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
 
-            const vcActive = vc.length > 0;
-            const blurb = vcActive ? 'YES' : 'NO';
+            const blurb = vc.length > 0 ? 'YES' : 'NO';
 
             document.getElementById("title").innerHTML = blurb;
 
-            if (vcActive) {
-                await confetti("tsparticles", {
-                    angle: 90,
-                    count: 50,
-                    position: {
-                        x: 50,
-                        y: 50,
-                    },
-                    spread: 45,
-                    startVelocity: 45,
-                    decay: 0.9,
-                    gravity: 1,
-                    drift: 0,
-                    ticks: 200,
-                    colors: ["#ffffff", "#ff0000"],
-                    shapes: ["square", "circle"],
-                    scalar: 1,
-                    zIndex: 100,
-                    disableForReducedMotion: true,
-                });
+            if (vc.length > 0 && !hasConfettied) {
+                if (!hasConfettied) {
+                    await showConfetti();
+                }
 
-                const expiry = humanizeDuration(new Date() - new Date(vc[0].expiry), { round: true }) + ' left';
-                document.getElementById("duration").innerHTML = expiry;
-
-                setInterval(() => {
-                    const expiry = humanizeDuration(new Date() - new Date(vc[0].expiry), { round: true }) + ' left';
-                    document.getElementById("duration").innerHTML = expiry;
-                }, 1000);
+                if (!notified) {
+                    notify();
+                }
             }
+
+            if (vc.length === 0) {
+                hasConfettied = false;
+                notified = false;
+            }
+        }
+
+        function notify() {
+            if (Notification.permission === "granted") {
+                const notification = new Notification("SP Void Cascade in active");
+                // …
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                        const notification = new Notification("SP Void Cascade in active");
+                    }
+                });
+            }
+
+            notified = true;
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await refresh();
+
+            setInterval(() => {
+                if (vc.length > 0) {
+                    updateTimeLeft();
+                } else {
+                    document.getElementById("duration").innerHTML = '&nbsp;';
+                }
+            }, 1000);
+
+            setInterval(async () => {
+                await refresh();
+            }, 60000);
+        });
+
+        window.addEventListener('focus', async () => {
+            await showConfetti();
         });
     </script>
   </body>
