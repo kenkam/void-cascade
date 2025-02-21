@@ -46,15 +46,15 @@
   <body>
     <div id="container" class="ok">
         <p>Is there SP Void Cascade at the moment?</p>
-        <h1 id="title">Loading...</h1>
-        <p id="duration"></p>
+        <h1 id="title">&nbsp;</h1>
+        <p id="duration">&nbsp;</p>
         <div id="tsparticles" class="ok"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js" async defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.8.1/tsparticles.confetti.bundle.min.js" async defer></script>
-    <script async defer>
-        (async () => {
+    <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.8.1/tsparticles.confetti.bundle.min.js" defer></script>
+    <script type="module">
+        window.addEventListener('DOMContentLoaded', async () => {
             const r = await fetch("https://api.warframestat.us/pc/fissures");
             const d = await r.json();
             const vc = d.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
@@ -93,7 +93,7 @@
                     document.getElementById("duration").innerHTML = expiry;
                 }, 1000);
             }
-        })();
+        });
     </script>
   </body>
 </html>
