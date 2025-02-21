@@ -37,10 +37,6 @@
             text-shadow: #444 4px 4px;
         }
 
-        div:not(.ok) {
-            display: none !important;
-        }
-
         button {
             position: relative;
             
@@ -92,19 +88,29 @@
         button:hover::after{
             opacity: 1;
         }
+
+        div#progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 1;
+            height: 2px;
+            background-color: #ddd;
+        }
     </style>
   </head>
 
   <body>
-    <div id="container" class="ok">
+    <div id="container">
         <p>Is there SP Void Cascade at the moment?</p>
         <h1 id="title">&nbsp;</h1>
         <p id="duration">&nbsp;</p>
-        <div id="tsparticles" class="ok"></div>
+        <div id="tsparticles"></div>
         <button type="button" id="notify">
             <img src="./notifications.svg" />
             Notifications <span id="notify-on-off">&nbsp;</span>
         </button>
+        <div id="progress"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js" defer></script>
@@ -114,6 +120,7 @@
             vc;
             $duration;
             $title;
+            $progress;
             hasConfettied;
             notified;
 
@@ -121,6 +128,7 @@
                 this.vc = [];
                 this.$duration = document.getElementById("duration");
                 this.$title = document.getElementById("title");
+                this.$progress = document.getElementById("progress");
                 this.hasConfettied = false;
                 this.notified = false;
             }
@@ -148,6 +156,20 @@
             _updateTitle() {
                 const blurb = this.vcIsActive() ? 'YES' : 'NO';
                 this.$title.innerHTML = blurb;
+            }
+
+            _updateProgress() {
+                if (this.vcIsActive()) {
+                    const expiry = new Date(this.vc[0].expiry)
+                    const total = expiry - new Date(this.vc[0].activation);
+                    const progress = expiry - new Date();
+                    const percentage = (progress / total) * 100;
+
+                    this.$progress.removeAttribute('hidden');
+                    this.$progress.style.width = percentage + '%';
+                } else {
+                    this.$progress.setAttribute('hidden', 'hidden');
+                }
             }
 
             vcIsActive() {
@@ -194,7 +216,7 @@
 
             updateFissures(fissures) {
                 const previous = this.vc
-                this.vc = fissures.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
+                this.vc = fissures.filter(x => x.missionKey === 'Survival' && x.isHard && x.active);
                 if (previous.length === 0 && this.vcIsActive()) {
                     this.hasConfettied = null;
                     this.notified = false;
@@ -206,6 +228,7 @@
             async refresh() {
                 this._updateTimeAndExpiry();
                 this._updateTitle();
+                this._updateProgress();
 
                 if (this.vcIsActive() && !this.hasConfettied) {
                     await this.showConfetti();
