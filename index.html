@@ -165,10 +165,10 @@
                     const progress = expiry - new Date();
                     const percentage = (progress / total) * 100;
 
-                    this.$progress.removeAttribute('hidden');
+                    this.$progress.style.display = 'block';
                     this.$progress.style.width = percentage + '%';
                 } else {
-                    this.$progress.setAttribute('hidden', 'hidden');
+                    this.$progress.style.display = 'none';
                 }
             }
 
@@ -193,7 +193,7 @@
                     colors: ["#ffffff", "#ff0000"],
                     shapes: ["square", "circle"],
                     scalar: 1,
-                    zIndex: 100,
+                    zIndex: -1,
                     disableForReducedMotion: true,
                 });
 
