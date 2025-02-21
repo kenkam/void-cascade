@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Steel Path Void Cascade?</title>
+
+    <style>
+        html {
+            height: 100%;
+            justify-content: center;
+            flex-direction: column;
+            display: flex;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            background: #111;
+        }
+
+        div {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+
+            font-family: sans-serif;
+            font-size: 2em;
+            color: #ddd;
+        }
+
+        h1 {
+            color: #fff;
+            text-shadow: #444 4px 4px;
+        }
+
+        div:not(.ok) {
+            display: none !important;
+        }
+    </style>
+  </head>
+
+  <body>
+    <div id="container" class="ok">
+        <p>Is there SP Void Cascade at the moment?</p>
+        <h1 id="title">Loading...</h1>
+        <p id="duration"></p>
+        <div id="tsparticles" class="ok"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.8.1/tsparticles.confetti.bundle.min.js" async defer></script>
+    <script async defer>
+        (async () => {
+            const r = await fetch("https://api.warframestat.us/pc/fissures");
+            const d = await r.json();
+            const vc = d.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
+
+            const vcActive = vc.length > 0;
+            const blurb = vcActive ? 'YES' : 'NO';
+
+            document.getElementById("title").innerHTML = blurb;
+
+            if (vcActive) {
+                await confetti("tsparticles", {
+                    angle: 90,
+                    count: 50,
+                    position: {
+                        x: 50,
+                        y: 50,
+                    },
+                    spread: 45,
+                    startVelocity: 45,
+                    decay: 0.9,
+                    gravity: 1,
+                    drift: 0,
+                    ticks: 200,
+                    colors: ["#ffffff", "#ff0000"],
+                    shapes: ["square", "circle"],
+                    scalar: 1,
+                    zIndex: 100,
+                    disableForReducedMotion: true,
+                });
+
+                const expiry = humanizeDuration(new Date() - new Date(vc[0].expiry), { round: true }) + ' left';
+                document.getElementById("duration").innerHTML = expiry;
+
+                setInterval(() => {
+                    const expiry = humanizeDuration(new Date() - new Date(vc[0].expiry), { round: true }) + ' left';
+                    document.getElementById("duration").innerHTML = expiry;
+                }, 1000);
+            }
+        })();
+    </script>
+  </body>
+</html>
