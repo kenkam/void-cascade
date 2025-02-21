@@ -110,13 +110,30 @@
     <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.8.1/tsparticles.confetti.bundle.min.js" defer></script>
     <script type="module">
-        let vc = null;
+        let vc = [];
         let hasConfettied = false;
         let notified = false;
 
+        function reset() {
+            vc = [];
+            hasConfettied = false;
+            notified = false;
+        }
+
         function updateTimeLeft() {
-            const expiry = humanizeDuration(new Date() - new Date(vc[0].expiry), { round: true }) + ' left';
-            document.getElementById("duration").innerHTML = expiry;
+            if (vc.length > 0) {
+                const diff = new Date() - new Date(vc[0].expiry);
+                if (diff > 0) {
+                    const expiry = humanizeDuration(new Date() - new Date(vc[0].expiry), { round: true }) + ' left';
+                    document.getElementById("duration").innerHTML = expiry;
+                    return;
+                } else {
+                    document.getElementById("title").innerHTML = 'NO';
+                    reset();
+                }
+            }
+    
+            document.getElementById("duration").innerHTML = '&nbsp;';
         }
 
         async function showConfetti() {
@@ -165,8 +182,7 @@
             }
 
             if (vc.length === 0) {
-                hasConfettied = false;
-                notified = false;
+                reset();
             }
         }
 
@@ -191,11 +207,7 @@
             await refresh();
 
             setInterval(() => {
-                if (vc.length > 0) {
-                    updateTimeLeft();
-                } else {
-                    document.getElementById("duration").innerHTML = '&nbsp;';
-                }
+                updateTimeLeft();
             }, 1000);
 
             setInterval(async () => {
