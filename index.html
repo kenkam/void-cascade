@@ -242,13 +242,12 @@
             }
 
             refresh() {
-                let notify = localStorage.getItem('enableNotifications') === 'true';
-                
                 // check if we have perms, if not, then disable notify
                 if (Notification.permission !== 'granted') {
                     localStorage.setItem('enableNotifications', false);
-                    notify = false;
                 }
+
+                const notify = localStorage.getItem('enableNotifications') === 'true';
 
                 if (notify) {
                     this.$button.classList.add('on');
