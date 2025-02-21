@@ -216,7 +216,7 @@
 
             updateFissures(fissures) {
                 const previous = this.vc
-                this.vc = fissures.filter(x => x.missionKey === 'Survival' && x.isHard && x.active);
+                this.vc = fissures.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
                 if (previous.length === 0 && this.vcIsActive()) {
                     this.hasConfettied = null;
                     this.notified = false;
