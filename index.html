@@ -110,137 +110,192 @@
     <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.8.1/tsparticles.confetti.bundle.min.js" defer></script>
     <script type="module">
-        let vc = [];
-        let hasConfettied = false;
-        let notified = false;
+        class State {
+            vc;
+            $duration;
+            $title;
+            hasConfettied;
+            notified;
 
-        function reset() {
-            vc = [];
-            hasConfettied = false;
-            notified = false;
-        }
-
-        function updateTimeLeft() {
-            if (vc.length > 0) {
-                const diff = new Date() - new Date(vc[0].expiry);
-                if (diff > 0) {
-                    const expiry = humanizeDuration(new Date() - new Date(vc[0].expiry), { round: true }) + ' left';
-                    document.getElementById("duration").innerHTML = expiry;
-                    return;
-                } else {
-                    document.getElementById("title").innerHTML = 'NO';
-                    reset();
-                }
+            constructor() {
+                this.vc = [];
+                this.$duration = document.getElementById("duration");
+                this.$title = document.getElementById("title");
+                this.hasConfettied = false;
+                this.notified = false;
             }
-    
-            document.getElementById("duration").innerHTML = '&nbsp;';
-        }
 
-        async function showConfetti() {
-            await confetti("tsparticles", {
-                angle: 90,
-                count: 50,
-                position: {
-                    x: 50,
-                    y: 50,
-                },
-                spread: 45,
-                startVelocity: 45,
-                decay: 0.9,
-                gravity: 1,
-                drift: 0,
-                ticks: 200,
-                colors: ["#ffffff", "#ff0000"],
-                shapes: ["square", "circle"],
-                scalar: 1,
-                zIndex: 100,
-                disableForReducedMotion: true,
-            });
+            updateTimeAndExpiry() {
+                this._updateTimeAndExpiry();
+                this.refresh();
+            }
 
-            hasConfettied = true;
-            updateTimeLeft();
-        }
-
-        async function refresh() {
-            const r = await fetch("https://api.warframestat.us/pc/fissures");
-            const d = await r.json();
-            vc = d.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
-
-            const blurb = vc.length > 0 ? 'YES' : 'NO';
-
-            document.getElementById("title").innerHTML = blurb;
-
-            if (vc.length > 0 && !hasConfettied) {
-                if (!hasConfettied) {
-                    await showConfetti();
+            _updateTimeAndExpiry() {
+                if (this.vcIsActive()) {
+                    const diff = new Date(this.vc[0].expiry) - new Date();
+                    if (diff > 0) {
+                        const expiry = humanizeDuration(diff, { round: true }) + ' left';
+                        this.$duration.innerHTML = expiry;
+                        return;
+                    } else {
+                        this.clearVc();
+                    }
                 }
 
+                this.$duration.innerHTML = '&nbsp;';
+            }
+
+            _updateTitle() {
+                const blurb = this.vcIsActive() ? 'YES' : 'NO';
+                this.$title.innerHTML = blurb;
+            }
+
+            vcIsActive() {
+                return this.vc.length > 0;
+            }
+
+            async showConfetti() {
+                await confetti("tsparticles", {
+                    angle: 90,
+                    count: 50,
+                    position: {
+                        x: 50,
+                        y: 50,
+                    },
+                    spread: 45,
+                    startVelocity: 45,
+                    decay: 0.9,
+                    gravity: 1,
+                    drift: 0,
+                    ticks: 200,
+                    colors: ["#ffffff", "#ff0000"],
+                    shapes: ["square", "circle"],
+                    scalar: 1,
+                    zIndex: 100,
+                    disableForReducedMotion: true,
+                });
+
+                this.hasConfettied = true;
+            }
+
+            notify() {
                 const notificationsOn = localStorage.getItem("enableNotifications") === 'true';
-                if (!notified && !!notificationsOn) {
-                    notify();
+                if (!this.notified && notificationsOn) {
+                    const notification = new Notification("SP Void Cascade in active");
+                    this.notified = true;
                 }
             }
 
-            if (vc.length === 0) {
-                reset();
+            clearVc() {
+                this.vc = [];
+                this.hasConfettied = null;
+                this.notified = false;
             }
-        }
 
-        function notify() {
-            const notification = new Notification("SP Void Cascade in active");
-            notified = true;
-        }
-
-        window.addEventListener('DOMContentLoaded', async () => {
-            const notify = localStorage.getItem("enableNotifications") === 'true';
-            if (notify) {
-                if (!Notification.permission) {
-                    // Notify was set to on but we dont have permission. So disable notifications until
-                    // user clicks the button again
-                    localStorage.getItem("enableNotifications", 'false');
-                } else {
-                    document.getElementById('notify').classList.add('on');
-                    document.getElementById('notify-on-off').innerHTML = 'on';
+            updateFissures(fissures) {
+                const previous = this.vc
+                this.vc = fissures.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
+                if (previous.length === 0 && this.vcIsActive()) {
+                    this.hasConfettied = null;
+                    this.notified = false;
                 }
-            } else {
-                document.getElementById('notify').classList.remove('on');
-                document.getElementById('notify-on-off').innerHTML = 'off';
+                
+                this.refresh();
             }
 
-            await refresh();
+            async refresh() {
+                this._updateTimeAndExpiry();
+                this._updateTitle();
 
-            setInterval(() => {
-                updateTimeLeft();
-            }, 1000);
+                if (this.vcIsActive() && !this.hasConfettied) {
+                    await this.showConfetti();
+                }
 
-            setInterval(async () => {
-                await refresh();
-            }, 60000);
+                if (this.vcIsActive()) {
+                    this.notify();
+                }
+            }
+        }
 
-            document.getElementById('notify').addEventListener('click', () => {
-                const notify = localStorage.getItem("enableNotifications") === 'true';
-                if (!notify) {
-                    if (!Notification.permission) {
+        class NotificationButton {
+            $button;
+            $buttonStateText;
+
+            constructor() {
+                this.$button = document.getElementById('notify');
+                this.$buttonStateText = document.getElementById('notify-on-off');
+
+                this.$button.addEventListener('click', () => {
+                    const notify = localStorage.getItem("enableNotifications") === 'true';
+                    localStorage.setItem("enableNotifications", !notify);   
+
+                    if (!notify && !Notification.permission !== 'denied') {       
                         Notification.requestPermission().then(() => {
                             new Notification('Notification has been enabled');
                         });
                     }
 
-                    document.getElementById('notify').classList.add('on');
-                    document.getElementById('notify-on-off').innerHTML = 'on';
-                } else {
-                    document.getElementById('notify-on-off').innerHTML = 'off';
-                    document.getElementById('notify').classList.remove('on');
-                }
-                
-                localStorage.setItem("enableNotifications", !notify);
-            });
-        });
+                    this.refresh();
+                });
 
-        window.addEventListener('focus', async () => {
-            if (vc.length > 0) {
-                await showConfetti();
+                this.refresh();
             }
+
+            refresh() {
+                const notify = localStorage.getItem("enableNotifications") === 'true';
+
+                if (notify) {
+                    this.$button.classList.add('on');
+                    this.$buttonStateText.innerHTML = 'on';
+                } else {
+                    this.$button.classList.remove('on');
+                    this.$buttonStateText.innerHTML = 'off';
+                }
+            }
+        }
+
+        class Poller {
+            state;
+
+            constructor(state) {
+                this.state = state;
+            }
+
+            tickTimeForever() {
+                setInterval(() => {
+                    this.state.updateTimeAndExpiry();
+                }, 1000);
+            }
+
+            updateFissuresForever() {
+                this._updateFissureOnce();
+                setInterval(async () =>  {
+                    this._updateFissureOnce();
+                }, 60000);
+            }
+
+            async _updateFissureOnce() {
+                const r = await fetch("https://api.warframestat.us/pc/fissures");
+                const d = await r.json();
+                this.state.updateFissures(d);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const button = new NotificationButton();
+            const state = new State();
+
+            await state.refresh();
+
+            const poller = new Poller(state);
+            poller.tickTimeForever();
+            poller.updateFissuresForever();
+
+            window.addEventListener('focus', async () => {
+                if (state.vcIsActive()) {
+                    await state.showConfetti();
+                }
+            });
         });
     </script>
   </body>
