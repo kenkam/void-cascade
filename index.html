@@ -230,7 +230,7 @@
                 this._updateTitle();
                 this._updateProgress();
 
-                if (this.vcIsActive() && !this.hasConfettied) {
+                if (this.vcIsActive() && !this.hasConfettied && document.hasFocus()) {
                     await this.showConfetti();
                 }
 
