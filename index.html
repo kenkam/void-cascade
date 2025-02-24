@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Steel Path Void Cascade?</title>
+    <link id="favicon" rel="icon" href="./no.svg" type="image/svg" />
 
     <style>
         html {
@@ -120,11 +121,13 @@
             $duration;
             $title;
             $progress;
+            $favicon;
 
             constructor() {
                 this.$duration = document.getElementById("duration");
                 this.$title = document.getElementById("title");
                 this.$progress = document.getElementById("progress");
+                this.$favicon = document.getElementById("favicon");
 
                 this.updateVc(null);
             }
@@ -133,6 +136,7 @@
                 this._updateTitle(vc);
                 this.updateTime(vc);
                 this._updateProgress(vc);
+                this._updateFavicon(vc);
             }
 
             updateTime(vc) {
@@ -186,6 +190,14 @@
                     this.$progress.style.width = percentage + '%';
                 } else {
                     this.$progress.style.display = 'none';
+                }
+            }
+
+            _updateFavicon(vc) {
+                if (!!vc?.active) {
+                    this.$favicon.href = './yes.svg';
+                } else {
+                    this.$favicon.href = './no.svg';
                 }
             }
         }

@@ -206,7 +206,7 @@
         "expired": false,
         "eta": "1h 3m 10s",
         "isStorm": false,
-        "isHard": true
+        "isHard": false
     },
     {
         "id": "67bc95a25ab87c892fc1c18d",
