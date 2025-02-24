@@ -93,7 +93,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 1;
+            width: 0;
             height: 2px;
             background-color: #ddd;
         }
@@ -116,64 +116,36 @@
     <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.8.1/tsparticles.confetti.bundle.min.js" defer></script>
     <script type="module">
-        class State {
-            vc;
+        class View {
             $duration;
             $title;
             $progress;
-            hasConfettied;
-            notified;
 
             constructor() {
-                this.vc = [];
                 this.$duration = document.getElementById("duration");
                 this.$title = document.getElementById("title");
                 this.$progress = document.getElementById("progress");
-                this.hasConfettied = false;
-                this.notified = false;
+
+                this.updateVc(null);
             }
 
-            updateTimeAndExpiry() {
-                this._updateTimeAndExpiry();
-                this.refresh();
+            updateVc(vc) {
+                this._updateTitle(vc);
+                this.updateTime(vc);
+                this._updateProgress(vc);
             }
 
-            _updateTimeAndExpiry() {
-                if (this.vcIsActive()) {
-                    const diff = new Date(this.vc[0].expiry) - new Date();
+            updateTime(vc) {
+                if (vc?.active) {
+                    const diff = new Date(vc.expiry) - new Date();
                     if (diff > 0) {
                         const expiry = humanizeDuration(diff, { round: true }) + ' left';
                         this.$duration.innerHTML = expiry;
-                        return;
-                    } else {
-                        this.clearVc();
+                        this._updateProgress(vc);
                     }
-                }
-
-                this.$duration.innerHTML = '&nbsp;';
-            }
-
-            _updateTitle() {
-                const blurb = this.vcIsActive() ? 'YES' : 'NO';
-                this.$title.innerHTML = blurb;
-            }
-
-            _updateProgress() {
-                if (this.vcIsActive()) {
-                    const expiry = new Date(this.vc[0].expiry)
-                    const total = expiry - new Date(this.vc[0].activation);
-                    const progress = expiry - new Date();
-                    const percentage = (progress / total) * 100;
-
-                    this.$progress.style.display = 'block';
-                    this.$progress.style.width = percentage + '%';
                 } else {
-                    this.$progress.style.display = 'none';
+                    this.$duration.innerHTML = '&nbsp;';
                 }
-            }
-
-            vcIsActive() {
-                return this.vc.length > 0;
             }
 
             async showConfetti() {
@@ -196,46 +168,68 @@
                     zIndex: -1,
                     disableForReducedMotion: true,
                 });
-
-                this.hasConfettied = true;
             }
 
-            notify() {
-                const notificationsOn = localStorage.getItem('enableNotifications') === 'true';
-                if (!this.notified && notificationsOn) {
-                    const notification = new Notification('SP Void Cascade in active');
-                    this.notified = true;
+            _updateTitle(vc) {
+                const blurb = !!vc?.active ? 'YES' : 'NO';
+                this.$title.innerHTML = blurb;
+            }
+
+            _updateProgress(vc) {
+                if (!!vc?.active) {
+                    const expiry = new Date(vc.expiry)
+                    const total = expiry - new Date(vc.activation);
+                    const progress = expiry - new Date();
+                    const percentage = (progress / total) * 100;
+
+                    this.$progress.style.display = 'block';
+                    this.$progress.style.width = percentage + '%';
+                } else {
+                    this.$progress.style.display = 'none';
+                }
+            }
+        }
+
+        class State {
+            vc;
+            expiry;
+            vcUpdated = [];
+
+            constructor() {
+                this.vc = null;
+            }
+
+            onVcUpdated(fn) {
+                if (typeof fn === 'function') {
+                    this.vcUpdated.push(fn);
                 }
             }
 
+            vcIsActive() {
+                return !!this.vc?.active;
+            }
+
             clearVc() {
-                this.vc = [];
-                this.hasConfettied = null;
-                this.notified = false;
+                this.vc = null;
+                for (let fn of this.vcUpdated) {
+                    fn(this.vc);
+                }
             }
 
             updateFissures(fissures) {
                 const previous = this.vc
-                this.vc = fissures.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
-                if (previous.length === 0 && this.vcIsActive()) {
-                    this.hasConfettied = null;
-                    this.notified = false;
-                }
-                
-                this.refresh();
-            }
-
-            async refresh() {
-                this._updateTimeAndExpiry();
-                this._updateTitle();
-                this._updateProgress();
-
-                if (this.vcIsActive() && !this.hasConfettied && document.hasFocus()) {
-                    await this.showConfetti();
-                }
-
-                if (this.vcIsActive()) {
-                    this.notify();
+                const vcs = fissures.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
+                this.vc = vcs.length > 0 ? vcs[0] : null;
+                if (previous === null && this.vcIsActive()) {
+                    setTimeout(() => this.clearVc(), new Date(this.vc.expiry) - new Date());
+                    
+                    for (let fn of this.vcUpdated) {
+                        fn(this.vc);
+                    }
+                } else if (previous !== null && !this.vcIsActive()) {
+                    for (let fn of this.vcUpdated) {
+                        fn(this.vc);
+                    }
                 }
             }
         }
@@ -287,30 +281,59 @@
             }
         }
 
-        class Poller {
+        class Controller {
             state;
+            view;
+            url;
+            fetchInterval;
+            hasConfettied;
+            hasNotified;
 
-            constructor(state) {
+            constructor(state, view) {
                 this.state = state;
+                this.view = view;
+
+                this.state.onVcUpdated(async vc => await this._onVcUpdated(vc));
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const debug = urlParams.get('debug');
+                this.url = !!debug ? './data.json' : 'https://api.warframestat.us/pc/fissures';
+                this.fetchInterval = !!debug ? 1000 : 60000;
+            }
+
+            notify() {
+                const notificationsOn = localStorage.getItem('enableNotifications') === 'true';
+                if (!this.notified && notificationsOn) {
+                    const notification = new Notification('SP Void Cascade in active');
+                    this.notified = true;
+                }
             }
 
             tickTimeForever() {
                 setInterval(() => {
-                    this.state.updateTimeAndExpiry();
+                    this.view.updateTime(this.state.vc);
                 }, 1000);
             }
 
             updateFissuresForever() {
                 this._updateFissureOnce();
                 setInterval(async () =>  {
-                    this._updateFissureOnce();
-                }, 60000);
+                    await this._updateFissureOnce();
+                }, this.fetchInterval);
             }
 
             async _updateFissureOnce() {
-                const r = await fetch('https://api.warframestat.us/pc/fissures');
+                const r = await fetch(this.url);
                 const d = await r.json();
                 this.state.updateFissures(d);
+            }
+
+            async _onVcUpdated(vc) {
+                this.view.updateVc(vc);
+                if (!!vc?.active && !this.hasConfettied && document.hasFocus()) {
+                    await this.view.showConfetti();
+                    this.hasConfettied = true;
+                }
             }
         }
 
@@ -323,16 +346,15 @@
         window.addEventListener('DOMContentLoaded', async () => {
             const button = new NotificationButton();
             const state = new State();
+            const view = new View();
 
-            await state.refresh();
-
-            const poller = new Poller(state);
-            poller.tickTimeForever();
-            poller.updateFissuresForever();
+            const controller = new Controller(state, view);
+            controller.tickTimeForever();
+            controller.updateFissuresForever();
 
             window.addEventListener('focus', async () => {
                 if (state.vcIsActive()) {
-                    await state.showConfetti();
+                    await view.showConfetti();
                 }
             });
         });
