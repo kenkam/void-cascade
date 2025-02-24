@@ -300,6 +300,7 @@
             fetchInterval;
             hasConfettied;
             hasNotified;
+            updateTimeIntervalId;
 
             constructor(state, view) {
                 this.state = state;
@@ -321,8 +322,8 @@
                 }
             }
 
-            tickTimeForever() {
-                setInterval(() => {
+            tickTimeEverySecond() {
+                return setInterval(() => {
                     this.view.updateTime(this.state.vc);
                 }, 1000);
             }
@@ -346,6 +347,12 @@
                     await this.view.showConfetti();
                     this.hasConfettied = true;
                 }
+
+                if (!!vc?.active) {
+                    this.updateTimeIntervalId = this.tickTimeEverySecond();
+                } else {
+                    clearInterval(this.updateTimeIntervalId);
+                }
             }
         }
 
@@ -361,7 +368,6 @@
             const view = new View();
 
             const controller = new Controller(state, view);
-            controller.tickTimeForever();
             controller.updateFissuresForever();
 
             window.addEventListener('focus', async () => {

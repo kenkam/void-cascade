@@ -193,7 +193,7 @@
         "id": "67bc91a76165d09e8fc1c18e",
         "activation": "2025-02-24T15:35:03.082Z",
         "startString": "-48m 57s",
-        "expiry": "2025-02-24T17:27:11.079Z",
+        "expiry": "2025-02-24T23:27:11.079Z",
         "active": true,
         "node": "Olympus (Mars)",
         "missionType": "Disruption",
@@ -206,7 +206,7 @@
         "expired": false,
         "eta": "1h 3m 10s",
         "isStorm": false,
-        "isHard": false
+        "isHard": true
     },
     {
         "id": "67bc95a25ab87c892fc1c18d",
