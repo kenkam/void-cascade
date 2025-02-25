@@ -316,9 +316,9 @@
 
             notify() {
                 const notificationsOn = localStorage.getItem('enableNotifications') === 'true';
-                if (!this.notified && notificationsOn) {
+                if (!this.hasNotified && notificationsOn) {
                     const notification = new Notification('SP Void Cascade in active');
-                    this.notified = true;
+                    this.hasNotified = true;
                 }
             }
 
@@ -349,6 +349,7 @@
                 }
 
                 if (!!vc?.active) {
+                    this.notify();
                     this.updateTimeIntervalId = this.tickTimeEverySecond();
                 } else {
                     clearInterval(this.updateTimeIntervalId);
