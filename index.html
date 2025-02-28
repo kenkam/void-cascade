@@ -353,6 +353,8 @@
                     this.updateTimeIntervalId = this.tickTimeEverySecond();
                 } else {
                     clearInterval(this.updateTimeIntervalId);
+                    this.hasConfettied = false;
+                    this.hasNotified = false;
                 }
             }
         }
