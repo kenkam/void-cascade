@@ -230,7 +230,8 @@
 
             updateFissures(fissures) {
                 const previous = this.vc
-                const vcs = fissures.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.active);
+                const now = new Date();
+                const vcs = fissures.filter(x => x.missionKey === 'Void Cascade' && x.isHard && x.expiry > now && x.startDate < now);
                 this.vc = vcs.length > 0 ? vcs[0] : null;
                 if (previous === null && this.vcIsActive()) {
                     setTimeout(() => this.clearVc(), new Date(this.vc.expiry) - new Date());
